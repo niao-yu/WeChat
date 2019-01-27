@@ -1,0 +1,16 @@
+{
+  "name": "express",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "@babel/polyfill": "^7.2.5",
+    "body-parser": "^1.18.3",
+    "crypto": "^1.0.1",
+    "express": "^4.16.4",
+    "express-static": "^1.2.6",
+    "memory-cache": "^0.2.0",
+    "request": "^2.88.0",
+    "sha1": "^1.1.1"
+  }
+}
