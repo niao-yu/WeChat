@@ -1,5 +1,7 @@
 const request = require('request')
+const config = require('./config') // 引入配置文件
 const urlLib = require('url') // 格式化 get 请求的传参
+const qs = require('qs')
 
 // 缓存
 const myCache = {
@@ -43,7 +45,7 @@ const utils = {
     } else { // 已过期，重新获取
       return new Promise((resolve, reject) => {
         // 先获取 token
-        this.getAccess_token().then(access_token => {
+        utils.getAccess_token().then(access_token => {
           request('https://api.weixin.qq.com/cgi-bin/ticket/getticket?access_token=' + access_token + '&type=jsapi', function (error, resp, json) {
             if (!error && resp.statusCode == 200) {
               let ticketMap = JSON.parse(json)
@@ -58,6 +60,44 @@ const utils = {
         }).catch(error => reject(error))
       })
     }
+  },
+  // 通过 code 获取 openId 和 access_token
+  getOpenIdAndAccessToken(code) {
+    let params = {
+      appid: config.appId,
+      secret: config.appSecret,
+      code,
+      grant_type: 'authorization_code'
+    }
+    let url = `https://api.weixin.qq.com/sns/oauth2/access_token?${qs.stringify(params)}`
+    return new Promise((resolve, reject) => {
+      request(url, function (error, res, body) {
+        if (res) {
+          let bodyObj = JSON.parse(body)
+          resolve(bodyObj);
+        } else {
+          reject(error);
+        }
+      })
+    })
+  },
+  // 获取用户信息
+  getUserInfo({ access_token, openid }) {
+    let params = {
+      access_token,
+      openid,
+      lang: 'zh_CN'
+    };
+    let url = `https://api.weixin.qq.com/sns/userinfo?${qs.stringify(params)}`
+    return new Promise((resolve, reject) => {
+      request(url, function (err, res, body) {
+        if (res) {
+          resolve(JSON.parse(body))
+        } else {
+          reject(err);
+        }
+      });
+    })
   }
 }
 

@@ -1,10 +1,10 @@
 const express = require('express')
-const crypto = require('crypto')  //引入加密模块
-const config = require('./config')//引入配置文件
+const crypto = require('crypto')  // 引入加密模块
+const config = require('./config') // 引入配置文件
 let bodyParser = require('body-parser') // 中间件,用于获取 post 的传值
 const sha1 = require('sha1')
 
-const { getJsapi_ticket } = require('./utils')
+const { getJsapi_ticket, getOpenIdAndAccessToken, getUserInfo } = require('./utils')
 
 const server = express()
 server.use(bodyParser.urlencoded({ extended: false }))
@@ -34,7 +34,44 @@ server.post('/getsign', (req, res) => {
         signature: sha1('jsapi_ticket=' + jsapi_ticket + '&noncestr=' + noncestr + '&timestamp=' + timestamp + '&url=' + url)
       }
       res.send(obj)
-    }).catch(error => res.send(error))
+    }).catch(error => {
+      res.send(error)
+    })
+  } catch (error) {
+    res.send(error)
+  }
+})
+
+// 获取微信授权 --- code
+server.post('/getOauth2', (req, res) => {
+  try {
+    let params = req.body
+    let redirect_uri = params.url
+    let state = params.state
+    let type = params.type
+    // 第一步：用户同意授权，获取code
+    // type:snsapi_base // 不弹出授权页面，直接跳转，只能获取用户openid
+    // type:snsapi_userinfo // 弹出授权页面，可通过openid拿到昵称、性别、所在地
+    var scope = type // 弹出授权页面，拿到code
+    let url = `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${config.appId}&redirect_uri=${redirect_uri}&response_type=code&scope=${scope}${state ? '&state=' + state : ''}#wechat_redirect`
+    res.send({ url });
+  } catch (error) {
+    res.send(error)
+  }
+})
+
+// 获取用户个人信息
+server.post('/getUserInfo', (req, res) => {
+  try {
+    let params = req.body
+    let code = params.code
+    // 先用 code 换取 openId 和 access_token
+    getOpenIdAndAccessToken(code).then(obj => {
+      // 用 openId 和 access_token 获取个人信息
+      getUserInfo(obj).then(data => {
+        res.send(data)
+      }).catch(error => res.send(error))
+    }).catch(error => res(error))
   } catch (error) {
     res.send(error)
   }

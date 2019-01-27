@@ -45,6 +45,9 @@
       padding: 5px;
       margin: 10px;
     }
+    #index .box .getUserInfo {
+      display: none;
+    }
   </style>
   <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
     crossorigin="anonymous"></script>
@@ -54,10 +57,16 @@
 <body>
   <div id="index">
     <div class="box">
-      <div class="init">初始化微信</div>
+      <div class="initSdk">初始化微信js-sdk</div>
+      <div class="initOauth2" type="snsapi_base">获取微信授权(静默)</div>
+      <div class="initOauth2" type="snsapi_userinfo">获取微信授权(弹框)</div>
+      <br>
       <div class="share">隐藏分享</div>
       <div class="wxSweep">扫一扫</div>
+      <br>
+      <div class="getUserInfo">获取用户信息</div>
     </div>
+    <div class="userInfo"></div>
     <!-- <div class="input-box">
       <input type="text" placeholder="请输入标题" class="title">
       <input type="text" placeholder="请输入描述" class="dec">
@@ -66,10 +75,11 @@
   </div>
 </body>
 <script>
-  console.log('进入首页')
+  console.log('当前 url：', window.location.href)
   new VConsole();
   let BASE_URL = 'http://wxtestapi.junlli.com'
-  let init = false // 微信是否初始化
+  // let BASE_URL = 'http://localhost:3000'
+  let initSdk = false // 微信是否初始化
 
   // 拼装分享信息
   let shareData = {
@@ -89,9 +99,53 @@
     }
   }
 
+  // 获取 url 参数
+  const getValue = () => {
+    // var obj = [{a:10,b:20},{a:10,b:20}];
+    // var obj = '[{"a":10,"b":20},{"a":10,"b":20}]';
+    // var obj = 'a=10';
+    //location.search是从当前URL的?号开始的字符串 ,截取并解决乱码
+    let flag = decodeURI(window.location.search.substr(1));
+    if (!flag) return undefined
+    let arr = flag.split('&')
+    if (arr.length <= 0) return undefined
+    let obj = {}
+    for (let i = 0; i < arr.length; i++) {
+      let tempArr = arr[i].split('=')
+      obj[tempArr[0]] = tempArr[1]
+    }
+    return obj
+  }
+
+  let urlParams = getValue()
+  let code
+  console.log(urlParams)
+  if (urlParams && urlParams.code) {
+    code = urlParams.code
+    $('.getUserInfo').css('display', 'inline-block')
+  }
+
+  $('.getUserInfo').on('click', function() {
+    if (!code) return alert('请重新获取授权')
+    $.ajax({
+      url: BASE_URL + '/getUserInfo',
+      type: 'post',
+      data: {
+        code,
+      },
+      success: function(data) {
+        console.log(data)
+        $('.userInfo').html(JSON.stringify(data))
+      },
+      error: function(error) {
+        console.log(error)
+        alert('请重新获取授权')
+      }
+    })
+  })
   // 分享
   $('.share').on('click', function() {
-    if (!init) return alert('请先初始化微信功能')
+    if (!initSdk) return alert('请先初始化微信功能')
     wx.hideMenuItems({
       menuList: [
         'menuItem:share:appMessage', // 发送给朋友
@@ -102,7 +156,7 @@
   
   // 扫一扫
   $('.wxSweep').on('click', function() {
-    if (!init) return alert('请先初始化微信功能')
+    if (!initSdk) return alert('请先初始化微信功能')
     wx.scanQRCode({
       needResult: 0, // 默认为0，扫描结果由微信处理，1则直接返回扫描结果，
       scanType: ["qrCode", "barCode"], // 可以指定扫二维码还是一维码，默认二者都有
@@ -114,11 +168,17 @@
   })
 
   // 初始化微信
-  $('.box .init').on('click', function() {
-    wxInit()
+  $('.box .initSdk').on('click', function() {
+    wxInitSdk()
   })
-  // 微信初始化
-  let wxInit = function() {
+
+  // 获取微信收取 
+
+  $('.box .initOauth2').on('click', function() {
+    wxInitOauth2($(this).attr('type'))
+  })
+  // 微信初始化 sdk
+  let wxInitSdk = function() {
     let myUrl = window.location.href.split('#')[0]
     console.log('我的url: ', myUrl)
     $.ajax({
@@ -150,7 +210,7 @@
         });
         // 方法监听
         wx.ready(function () {
-          init = true
+          initSdk = true
           console.log('初始化成功')
           wx.updateAppMessageShareData(shareData);
           wx.onMenuShareTimeline(shareData);
@@ -167,6 +227,28 @@
       error: function(error) {
         console.log('错误')
       }
+    })
+  }
+
+  // 初始化 微信授权
+  wxInitOauth2 = type => {
+    let url = window.location.origin + window.location.pathname
+    console.log('url', url)
+    $.ajax({
+      url: BASE_URL + '/getOauth2',
+      type: 'post',
+      data: {
+        url,
+        type,
+        state: 'abcde'
+      },
+      success: function(data) {
+        window.location.href = data.url
+        // console.log(data)
+      },
+      error: function(error) {
+        console.log(error)
+      },
     })
   }
 </script>
