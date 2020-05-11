@@ -243,6 +243,7 @@
         state: 'abcde'
       },
       success: function(data) {
+        console.log('getOauth2', data)
         window.location.href = data.url
         // console.log(data)
       },
