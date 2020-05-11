@@ -84,7 +84,7 @@ server.get('/forWx', function (req, res) {
   let signature = req.query.signature // 微信加密签名
   let timestamp = req.query.timestamp // 时间戳
   let nonce = req.query.nonce // 随机数
-  let echostr = req.query.echost // 随机字符串
+  let echostr = req.query.echostr // 随机字符串
 
   //2.将token、timestamp、nonce三个参数进行字典序排序
   let array = [config.token, timestamp, nonce]
